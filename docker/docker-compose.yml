@@ -53,7 +53,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   spark-master:
-    image: apache/spark-py:v3.5.0
+    image: apache/spark:latest
     container_name: spark-master
     environment:
       - SPARK_MODE=master
@@ -62,7 +62,7 @@ services:
       - "${SPARK_MASTER_PORT}:7077"
 
   spark-worker:
-    image: apache/spark-py:v3.5.0
+    image: apache/spark:latest
     container_name: spark-worker
     depends_on:
       - spark-master

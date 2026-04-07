@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Order",
+  "type": "object",
+  "properties": {
+    "order_id": { "type": "string", "format": "uuid" },
+    "user_id": { "type": "string" },
+    "product_id": { "type": "string" },
+    "product_name": { "type": "string" },
+    "category": { "type": "string" },
+    "amount": { "type": "number" },
+    "quantity": { "type": "integer" },
+    "payment_method": { "type": "string" },
+    "ip_address": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" }
+  },
+  "required": [
+    "order_id",
+    "user_id",
+    "product_id",
+    "category",
+    "amount",
+    "timestamp"
+  ]
+}
