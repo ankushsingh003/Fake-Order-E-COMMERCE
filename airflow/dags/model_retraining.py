@@ -1,0 +1,41 @@
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime, timedelta
+import os
+import subprocess
+
+default_args = {
+    'owner': 'data_engineer',
+    'depends_on_past': False,
+    'start_date': datetime(2024, 1, 1),
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+}
+
+def train_model():
+    """Triggers the model training script"""
+    script_path = "ml/train/train_fraud_model.py"
+    if os.path.exists(script_path):
+        result = subprocess.run(["python", script_path], capture_output=True, text=True)
+        print(result.stdout)
+        if result.returncode != 0:
+            raise Exception(f"Training failed: {result.stderr}")
+    else:
+        raise FileNotFoundError(f"Training script not found at {script_path}")
+
+with DAG(
+    'fraud_model_retraining',
+    default_args=default_args,
+    description='Retrains the fraud detection model periodically',
+    schedule_interval=timedelta(days=1), # Retrain daily
+    catchup=False,
+) as dag:
+
+    retrain_task = PythonOperator(
+        task_id='retrain_fraud_model',
+        python_callable=train_model,
+    )
+
+    retrain_task
