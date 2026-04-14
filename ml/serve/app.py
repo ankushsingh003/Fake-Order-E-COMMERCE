@@ -43,9 +43,9 @@ from torch_geometric.nn import SAGEConv
 import torch.nn.functional as F
 from pytorch_forecasting import TemporalFusionTransformer
 
-# Import Agentic AI components
 from ml.agents.fraud_investigator import fraud_investigator
 from ml.ops.alerts import alert_bot
+from ml.ops.firewall import GhostFirewall
 
 # Setup Structured Logging
 logHandler = logging.StreamHandler()
@@ -91,6 +91,7 @@ model_artifacts = {}
 gnn_model = None
 tft_model = None
 redis_client = None
+firewall = None
 
 class FraudGNN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels):
@@ -137,11 +138,15 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"⚠️ TFT Model loading restricted: {e}")
 
-    # 4. Connect to Redis (L3 Feature Store)
+    # 4. Connect to Redis (L3 Feature Store) & Initialize Firewall (L9)
     try:
         redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
         redis_client.ping()
         logger.info("✅ Connected to Redis Feature Store")
+        
+        global firewall
+        firewall = GhostFirewall(redis_client=redis_client)
+        logger.info("✅ Ghost Firewall (Layer 9) active")
     except Exception as e:
         logger.warning(f"⚠️ Redis connection failed: {e}. Running without real-time features.")
 
@@ -211,6 +216,11 @@ def get_gnn_score(order_amount):
 # --------------------------------------------------------------------------
 @app.post("/predict", response_model=FraudResponse)
 async def predict(order: OrderRequest, background_tasks: BackgroundTasks, api_key: str = Depends(get_api_key)):
+    # 0. GHOST FIREWALL CHECK (Layer 9: Edge Defense)
+    if firewall and firewall.is_blocked(order.ip_address):
+        logger.warning(f"🛡️ BLOCKED REQUEST: Connection from blacklisted IP {order.ip_address}")
+        raise HTTPException(status_code=403, detail="Your IP has been blacklisted due to suspicious activity.")
+
     if not model_artifacts:
         raise HTTPException(status_code=503, detail="Models not ready")
 
@@ -278,6 +288,12 @@ async def predict(order: OrderRequest, background_tasks: BackgroundTasks, api_ke
         background_tasks.add_task(
             alert_bot.send_fraud_alert, 
             order.order_id, max_score, risk_level, reasoning
+        )
+
+    # 5. GHOST FIREWALL AUTO-BLOCK (Layer 9)
+    if risk_level == "CRITICAL" and firewall:
+        background_tasks.add_task(
+            firewall.block_ip, order.ip_address, reasoning
         )
 
     return FraudResponse(

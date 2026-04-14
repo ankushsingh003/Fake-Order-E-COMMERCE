@@ -112,15 +112,16 @@ We have upgraded from a simple Isolation Forest to a State-of-the-Art **4-Layer 
 | **L6** | **Security & Compliance** | **SHA-256 Hashing** | Integrated PII masking and Secret Manager for GDPR readiness. | ✅ 100% |
 | **L7** | **Data Guardian** | **Dead Letter Queue** | Real-time schema enforcement and anomalous data routing. | ✅ 100% |
 | **L8** | **Ops Alerting** | **Slack/Webhook** | Real-time notifications for CRITICAL fraud rings. | ✅ 100% |
+| **L9** | **Ghost Firewall** | **Auto-Blocking** | Real-time IP blacklisting for CRITICAL threats. | ✅ 100% |
 
-### Prediction Workflow (Final v6.0):
-1. **Ingest**: Spark captures order and triggers the **Data Guardian (L7)**.
-2. **Filter**: Valid data proceeds; Anomalous data is routed to the **DLQ (L7)**.
-3. **Inference**: FastAPI enriches the order with **L3 (Redis)** features.
-4. **Score**: Dual-scoring with **L1 (Ensemble)** and **L1 (GNN)** in Shadow mode.
-5. **Investigate**: If borderline, **L2 (Agentic AI)** performs LangGraph research.
-6. **Alert**: If **CRITICAL**, **L8 (Alert Bot)** sends a reach notification to Slack/Discord. 
-7. **Forecast**: **L4 (TFT)** handles stock demand forecasting via a separate API.
+### Prediction Workflow (Final v7.0):
+1. **Defend**: **Ghost Firewall (L9)** checks Redis for blacklisted IPs before even running the ML code.
+2. **Ingest**: Valid requests hit Spark, which triggers the **Data Guardian (L7)**.
+3. **Filter**: Valid data proceeds; Anomalous data is routed to the **DLQ (L7)**.
+4. **Inference**: FastAPI enriches the order with **L3 (Redis)** features.
+5. **Score**: Dual-scoring with **L1 (Ensemble)** and **L1 (GNN)** in Shadow mode.
+6. **Investigate**: If borderline, **L2 (Agentic AI)** performs LangGraph research.
+7. **Strike**: If **CRITICAL**, **Ghost Firewall (L9)** blacklists the IP and **Alert Bot (L8)** notifies the team.
 
 ---
 
