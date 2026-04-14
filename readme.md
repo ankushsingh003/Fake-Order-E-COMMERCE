@@ -109,14 +109,17 @@ We have upgraded from a simple Isolation Forest to a State-of-the-Art **4-Layer 
 | **L3** | **Feature Store** | Redis | sub-3ms lookup of user reputation and real-time velocity. | ✅ 100% |
 | **L4** | **Demand Forecast** | **TFT (Transformer)** | Upgraded Prophet to Deep Learning Temporal Fusion Transformer. | ✅ 100% |
 | **L5** | **MLOps & A/B** | **Shadow Testing** | Real-time Challenger vs Champion scoring & Drift detection. | ✅ 100% |
+| **L6** | **Security & Compliance** | **SHA-256 Hashing** | Integrated PII masking and Secret Manager for GDPR readiness. | ✅ 100% |
+| **L7** | **Data Guardian** | **Dead Letter Queue** | Real-time schema enforcement and anomalous data routing. | ✅ 100% |
 
-### Prediction Workflow (Final v4.0):
-1. **Ingest**: Spark captures order and computes basic session velocity.
-2. **Inference**: FastAPI receives the order and enriches it with **L3 (Redis)** features.
-3. **Score (Champion)**: **L1 (Ensemble)** provides the primary fraud probability.
-4. **Score (Challenger)**: **L1 (GNN)** runs in **Shadow Mode (L5)** to compare "Ring Detection" performance.
-5. **Investigate**: If borderline, **L2 (Agentic AI)** performs LangGraph-based reasoning.
-6. **Forecast**: **L4 (TFT)** handles high-granularity demand forecasting via a new `/forecast` endpoint.
+### Prediction Workflow (Final v5.0):
+1. **Ingest**: Spark captures order and triggers the **Data Guardian (L7)**.
+2. **Filter**: Valid data proceeds; Anomalous data is routed to the **Dead Letter Queue (L7)**.
+3. **Inference**: FastAPI receives the order and enriches it with **L3 (Redis)** features.
+4. **Score (Champion)**: **L1 (Ensemble)** provides the primary fraud probability.
+5. **Score (Challenger)**: **L1 (GNN)** runs in **Shadow Mode (L5)** to compare performance.
+6. **Investigate**: If borderline, **L2 (Agentic AI)** performs LangGraph-based reasoning.
+7. **Forecast**: **L4 (TFT)** handles high-granularity demand forecasting via a separate endpoint.
 
 ---
 

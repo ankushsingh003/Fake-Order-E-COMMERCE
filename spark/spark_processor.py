@@ -59,22 +59,30 @@ fraud_udf_schema = StructType([
 fraud_check_udf = udf(detect_fraud, fraud_udf_schema)
 
 def transform_orders(raw_df, schema):
-    """Core transformation logic with PII Masking"""
+    """Core transformation logic with Data Guardian (L7) & PII Masking"""
     # 1. Parse JSON
     parsed_df = raw_df.select(from_json(col("value"), schema).alias("data")) \
         .select("data.*") \
         .withColumn("timestamp", col("timestamp").cast(TimestampType())) \
         .withWatermark("timestamp", "1 minute")
 
-    # 2. PII MASKING (Layer 6: Security & Compliance)
-    # Pseudonymize IP Address using SHA-256
-    # Mask User ID for storage privacy
-    protected_df = parsed_df \
+    # 2. DATA GUARDIAN (Layer 7: Data Quality)
+    # Define validation rules
+    is_valid_amount = (col("amount") > 0) & (col("amount") < 100000)
+    is_valid_user   = col("user_id").isNotNull()
+    is_valid_date   = col("timestamp") <= expr("current_timestamp()")
+    
+    # Split Stream: Valid Data vs Rejected (DLQ)
+    valid_df = parsed_df.filter(is_valid_amount & is_valid_user & is_valid_date)
+    rejected_df = parsed_df.filter(~(is_valid_amount & is_valid_user & is_valid_date))
+
+    # 3. PII MASKING (Layer 6: Security & Compliance)
+    protected_df = valid_df \
         .withColumn("ip_address_raw", col("ip_address")) \
         .withColumn("ip_address", sha2(col("ip_address"), 256)) \
         .withColumn("user_id_masked", concat_ws("-", col("user_id"), col("order_id")))
 
-    # 3. Feature Engineering: Windowed Aggregations
+    # 4. Feature Engineering
     orders_per_user = protected_df \
         .groupBy(
             window(col("timestamp"), "1 minute", "30 seconds"),
@@ -92,11 +100,11 @@ def transform_orders(raw_df, schema):
         """),
         "left"
     ).select(
-        parsed_df["*"],
+        protected_df["*"],
         col("orders_per_user_1m")
     ).fillna(0)
 
-    # ML Inference: Detect Fraud
+    # 5. ML Inference: Detect Fraud
     predictions_df = enriched_df.withColumn(
         "fraud_res", 
         fraud_check_udf(
@@ -107,7 +115,7 @@ def transform_orders(raw_df, schema):
     ).select("*", "fraud_res.is_fraud", "fraud_res.fraud_score", "fraud_res.risk_level", "fraud_res.reasoning") \
      .drop("fraud_res")
         
-    return predictions_df
+    return predictions_df, rejected_df
 
 def main():
     # Configuration
@@ -138,13 +146,21 @@ def main():
         .selectExpr("CAST(value AS STRING)")
 
     # Call the transformation logic
-    predictions_df = transform_orders(raw_df, schema)
+    predictions_df, rejected_df = transform_orders(raw_df, schema)
 
     # 5. Output sinks
-    # a) Console sink
+    # a) Console sink (Successful Orders)
     console_query = predictions_df \
         .writeStream \
         .outputMode("append") \
+        .format("console") \
+        .option("truncate", "false") \
+        .start()
+
+    # b) DLQ Sink (Rejected Orders)
+    print("Starting Dead Letter Queue (DLQ) Sink...")
+    dlq_query = rejected_df \
+        .writeStream \
         .format("console") \
         .option("truncate", "false") \
         .start()
