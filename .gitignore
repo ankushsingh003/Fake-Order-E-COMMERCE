@@ -49,3 +49,5 @@ venv.bak/
 /storage/data/
 /kafka/data/
 /spark/data/
+mlflow.db
+mlruns/
