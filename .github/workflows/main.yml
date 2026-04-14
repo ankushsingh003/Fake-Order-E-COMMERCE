@@ -1,0 +1,57 @@
+name: Real-Time E-Commerce Pipeline CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality-and-security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 bandit pytest
+        if [ -f producer/requirements.txt ]; then pip install -r producer/requirements.txt; fi
+        
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Security scan with Bandit
+      run: |
+        bandit -r . -x ./tests -ll
+
+    - name: Run unit tests
+      run: |
+        pytest tests/
+
+  docker-build:
+    needs: quality-and-security
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build Order Producer Image
+      run: docker build -t ecommerce-producer:latest -f docker/Dockerfile.producer .
+      continue-on-error: true # Depends on if Dockerfiles are ready
+      
+    - name: Build Spark Processor Image
+      run: docker build -t ecommerce-spark:latest -f docker/Dockerfile.spark .
+      continue-on-error: true
+
+    - name: Build ML Serving Image
+      run: docker build -t ecommerce-ml:latest -f docker/Dockerfile.ml .
+      continue-on-error: true

@@ -34,7 +34,8 @@ def detect_fraud(order_id, user_id, amount, ip, device, location_mismatch, order
             "location_mismatch": int(location_mismatch),
             "orders_per_user_last_minute": int(orders_per_user_1m)
         }
-        response = requests.post(url, json=payload, timeout=2)
+        headers = {"X-API-KEY": os.environ.get("ML_API_KEY", "dev-secret-key")}
+        response = requests.post(url, json=payload, headers=headers, timeout=2)
         if response.status_code == 200:
             res = response.json()
             return (

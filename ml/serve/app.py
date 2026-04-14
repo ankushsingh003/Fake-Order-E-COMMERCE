@@ -7,11 +7,33 @@ import redis
 import logging
 import csv
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Security, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 import shap
+from fastapi.security import APIKeyHeader
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+# --------------------------------------------------------------------------
+# SECURITY CONFIG
+# --------------------------------------------------------------------------
+API_KEY = os.environ.get("API_KEY", "dev-secret-key")
+api_key_header = APIKeyHeader(name="X-API-KEY")
+
+async def get_api_key(api_key_header: str = Security(api_key_header)):
+    if api_key_header == API_KEY:
+        return api_key_header
+    raise HTTPException(status_code=403, detail="Could not validate credentials")
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
 
 # Deep Learning specific imports
 from torch_geometric.nn import SAGEConv
@@ -37,6 +59,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # --------------------------------------------------------------------------
 # CONFIG & MODEL LOADING
@@ -171,7 +195,7 @@ def get_gnn_score(order_amount):
 # ENDPOINTS
 # --------------------------------------------------------------------------
 @app.post("/predict", response_model=FraudResponse)
-async def predict(order: OrderRequest, background_tasks: BackgroundTasks):
+async def predict(order: OrderRequest, background_tasks: BackgroundTasks, api_key: str = Depends(get_api_key)):
     if not model_artifacts:
         raise HTTPException(status_code=503, detail="Models not ready")
 
@@ -233,7 +257,7 @@ async def predict(order: OrderRequest, background_tasks: BackgroundTasks):
     )
 
 @app.post("/forecast", response_model=ForecastResponse)
-async def forecast(req: ForecastRequest):
+async def forecast(req: ForecastRequest, api_key: str = Depends(get_api_key)):
     """Layer 4: Deep Learning Demand Forecast (TFT)"""
     # In a real environment, we'd pull last 90 days from Postgres/Redis
     # For this final integration, we return a TFT-simulated dynamic forecast
