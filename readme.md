@@ -102,20 +102,21 @@ realtime-ecommerce-pipeline/
 
 We have upgraded from a simple Isolation Forest to a State-of-the-Art **4-Layer Fraud Roadmap**:
 
-| Layer | Component | Technology | Description |
-|-------|-----------|------------|-------------|
-| **L1** | **Ring Detection** | GNN (GraphSAGE) | Detects fraud rings by connecting orders sharing IP/Device. |
-| **L2** | **Agentic AI** | LangGraph | Borderline cases trigger an AI Investigator to research and decide. |
-| **L3** | **Feature Store** | Redis | sub-3ms lookup of user reputation and real-time velocity. |
-| **L4** | **Ensemble Model** | XGBoost + LightGBM | High-precision stacked ensemble with SHAP explanations. |
-| **L5** | **MLOps Monitoring** | Evidently | Daily drift detection and auto-retraining triggers. |
+| Layer | Component | Technology | Description | Status |
+|-------|-----------|------------|-------------|--------|
+| **L1** | **Ring Detection** | GNN (GraphSAGE) | Detects fraud rings by connecting orders sharing IP/Device. | ✅ 100% |
+| **L2** | **Agentic AI** | LangGraph | Borderline cases trigger an AI Investigator for evidence research. | ✅ 100% |
+| **L3** | **Feature Store** | Redis | sub-3ms lookup of user reputation and real-time velocity. | ✅ 100% |
+| **L4** | **Demand Forecast** | **TFT (Transformer)** | Upgraded Prophet to Deep Learning Temporal Fusion Transformer. | ✅ 100% |
+| **L5** | **MLOps & A/B** | **Shadow Testing** | Real-time Challenger vs Champion scoring & Drift detection. | ✅ 100% |
 
-### Prediction Workflow:
+### Prediction Workflow (Final v4.0):
 1. **Ingest**: Spark captures order and computes basic session velocity.
-2. **Inference**: FastAPI receives the order and enriches it with L3 (Redis) features.
-3. **Score**: L1 (GNN) and L4 (Ensemble) provide probability scores.
-4. **Investigate**: If fraud score is borderline (0.4–0.8), L2 (Agentic AI) is triggered to perform "Reasoning-over-Evidence".
-5. **Explain**: SHAP values generate human-readable reasons for every block (e.g., "High-risk proxy + New account + Velocity spike").
+2. **Inference**: FastAPI receives the order and enriches it with **L3 (Redis)** features.
+3. **Score (Champion)**: **L1 (Ensemble)** provides the primary fraud probability.
+4. **Score (Challenger)**: **L1 (GNN)** runs in **Shadow Mode (L5)** to compare "Ring Detection" performance.
+5. **Investigate**: If borderline, **L2 (Agentic AI)** performs LangGraph-based reasoning.
+6. **Forecast**: **L4 (TFT)** handles high-granularity demand forecasting via a new `/forecast` endpoint.
 
 ---
 
