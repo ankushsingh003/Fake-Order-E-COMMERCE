@@ -1,4 +1,4 @@
-# 🛒 Real-Time Safe-Shop Order Analytics Pipeline
+# 🛒 Real-Time E-Commerce Order Analytics Pipeline
 
 > A production-grade data engineering project that ingests live Safe-Shop orders, detects fraudulent transactions using ML, forecasts demand, and delivers real-time business insights through a unified dashboard.
 
