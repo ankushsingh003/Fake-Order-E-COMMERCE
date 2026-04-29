@@ -1,4 +1,4 @@
-name: Real-Time E-Commerce Pipeline CI/CD
+name: Safe-Shop Pipeline CI/CD
 
 on:
   push:
@@ -35,6 +35,8 @@ jobs:
         bandit -r . -x ./tests -ll
 
     - name: Run unit tests
+      env:
+        PYTHONPATH: .
       run: |
         pytest tests/
 

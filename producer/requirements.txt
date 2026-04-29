@@ -36,3 +36,7 @@ pytorch-lightning>=2.0.0
 evidently>=0.4.0
 prometheus-fastapi-instrumentator>=6.0.0
 
+# Testing Requirements
+pyspark>=3.5.0
+pytest-mock
+
